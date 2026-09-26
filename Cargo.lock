@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "rust-basic-template"
+name = "byte-radix"
 version = "0.1.0"
