@@ -1,2 +1,1 @@
-# basic-rust-template
-simple base 62 conversion
+# u8-base-converter

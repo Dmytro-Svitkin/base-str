@@ -1,6 +1,9 @@
 [package]
-name = "byte-radix"
+name = "u8-base-converter"
 version = "0.1.0"
 edition = "2024"
+license-file = "LICENSE"
+repository = "https://github.com/Dmytro-Svitkin/base-str"
+description = "Arbitrary-length base conversion for u8 bases."
 
 [dependencies]
