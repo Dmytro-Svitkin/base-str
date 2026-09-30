@@ -1,19 +1,31 @@
 mod alphabet;
 pub use crate::alphabet::*;
 
-pub fn str_to_base(str_alphabet:&str)->&[u8]{
+pub const fn str_to_base(str_alphabet:&str)->&[u8]{
     str_alphabet.as_bytes()
 }
 
-pub fn base_to_str(alphabet:&[u8])->&str{
-    core::str::from_utf8(alphabet).unwrap()
+pub const fn unsafe_base_to_str(base:&[u8])->&str{
+    unsafe{core::str::from_utf8_unchecked(base)}
+}
+
+pub const fn base_to_str(base:&[u8])->&str{
+    unsafe{core::str::from_utf8_unchecked(base)}
 }
 
 pub const fn base<'a>(x:u8)->&'a[u8]{// Limited to u8 and redeclared to usize, because I want to make bases over 255 impossible. Note that base(256) is not possible (but possible via constant BASE256).
     let x:usize=x as usize;
-    if x<63{return&BASE62.split_at(x).0}// Might replace that by a match with miscilinious bases (e.g., MORSE) added.
-    else if x<96{return&BASE95.split_at(x).0}
-    &BASE256.split_at(x).0
+    if x<63{return ALPHANUMERIC.split_at(x).0}// Might replace that by a match with miscilinious bases (e.g., MORSE) added.
+    else if x<96{return ASCII.split_at(x).0}
+    BASE256.split_at(x).0
+}
+
+/// Derrive a smaller or equal base from an old base by giving the number of digits.
+pub const fn new_base(old_base:&[u8],digits:u8)->&[u8]{
+    let digits:usize=digits as usize;
+    if old_base.len()>digits{return BASE256.split_at(digits).0}
+    old_base.split_at(digits).0
+    
 }
 
 pub fn convert<'a>(value:&[u8],source_base:&[u8],target_base:&[u8])->Vec<u8>{// Might replace Vec by a no_std alloc::vec::Vec or by another solution.
