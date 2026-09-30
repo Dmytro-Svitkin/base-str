@@ -1,3 +1,5 @@
+#![no_std]
+
 mod base;
 pub use crate::base::*;
 
@@ -6,114 +8,88 @@ struct Numeral<'a>{
     base:Base<'a>
 }
 
-struct Base<'a>{alphabet:&'a[u8]}
+/// Numeral base.
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+struct Base<'a>{base_alphabet:&'a[u8]}
 
-pub const fn str_to_base(str_alphabet:&str)->&[u8]{
-    str_alphabet.as_bytes()
-}
-
-pub const fn unsafe_base_to_str(base:&[u8])->&str{
-    unsafe{core::str::from_utf8_unchecked(base)}
-}
-
-/*pub const fn base_to_str(base:&[u8])->&str{
-    unsafe{core::str::from_utf8_unchecked(base)}
-}*/
-
-pub const fn base<'a>(x:u8)->&'a[u8]{// Limited to u8 and redeclared to usize, because I want to make bases over 255 impossible. Note that base(256) is not possible (but possible via constant BASE256).
-    let x:usize=x as usize;
-    if x<63{return ALPHANUMERIC.split_at(x).0}// Might replace that by a match with miscilinious bases (e.g., MORSE) added.
-    else if x<96{return ASCII.split_at(x).0}
-    BASE256.split_at(x).0
-}
-
-/// Derrive a smaller or equal base from an old base by giving the number of digits.
-pub const fn new_base(old_base:&[u8],digits:u8)->&[u8]{
-    let digits:usize=digits as usize;
-    if old_base.len()>digits{return BASE256.split_at(digits).0}
-    old_base.split_at(digits).0
-    
-}
-
-const fn find_digit(base:&[u8],digit:u8)->usize{
-    let mut counter:usize=0;
-    
-    while counter<base.len(){
-        if base[counter]==digit{return counter}
-        counter+=1
-    }
-    panic!("[!] INVALID DIGIT")
-}
-
-pub const fn trim_zeros<'a>(value:&'a[u8],base:&[u8])->&'a[u8]{
-    if value.is_empty()||base.len()<2{return value}
-
-    let zero:u8=base[0];
-    let mut index_counter:usize=0;
-
-    while index_counter<value.len(){
-        if value[index_counter]!=zero{return value.split_at(index_counter).1}
-        index_counter+=1
-    }
-    value.split_at(1).0// Returns a slice containing a single zero, if the collection contained zeros only.
-}
-
-pub const fn const_convert(value:&[u8],source_base:&[u8],target_base:&[u8],out_buf:&mut[u8])->usize{
-    let source_base_len:usize=source_base.len();
-    let target_base_len:usize=target_base.len();
-
-    if value.is_empty()||source_base_len==0||target_base_len==0{return 0};
-
-    let value:&[u8]=trim_zeros(value, source_base);
-    if value.is_empty(){return 0}
-
-    const MAX_LEN:usize=512;
-    if value.len()>MAX_LEN{panic!("[!] INPUT VALUE IS TOO LARGE")}
-
-    let mut source_digits:[usize;512]=[0usize;MAX_LEN];
-    let mut counter:usize=0;
-    while counter<value.len(){
-        source_digits[counter]=find_digit(source_base,value[counter]);
-        counter+=1
+impl<'a>Base<'a>{
+    /// New base.
+    /// 
+    /// Creates a new base from the given slice of byte array.
+    pub const fn new(base_alphabet:&'a[u8])->Self{
+        Self{base_alphabet}
     }
 
-    let mut target_indices:[usize;512]=[0usize;MAX_LEN];
-    let mut target_count:usize=0;
-    let mut start:usize=0;
+    /// Length of base.
+    /// 
+    /// Returns the number of digits of the base.
+    pub const fn len(&self)->usize{
+        self.base_alphabet.len()
+    }
 
-    while start<value.len(){
-        let mut current_carry:usize=0;
-        let mut new_start:usize=start;
-        let mut leading_zero:bool=true;
+    /// Radix of base.
+    /// 
+    /// Returns the radix of the base.
+    pub const fn radix(&self)->usize{
+        self.len()
+    }
 
-        let mut ix:usize=start;
-        while ix<value.len(){
-            let working_value:usize=current_carry*source_base_len+source_digits[ix];
-            let quotient_digit:usize=working_value/target_base_len;
-            current_carry=working_value%target_base_len;
-            source_digits[ix]=quotient_digit;
+    /// Relative (to base) zero digit.
+    /// 
+    /// Returns the first digit of the base.
+    pub const fn zero(&self)->u8{
+        self.base_alphabet[0]
+    }
 
-            if leading_zero{
-                if quotient_digit==0{new_start+=1}
-                else{leading_zero=false}
+    /// Base to unsafe `&str` conversion.
+    /// 
+    /// Does not verify if the base contains valid UTF-8 characters.
+    /// 
+    /// Returns `&str`.
+    /// ___
+    /// ## Safety
+    /// The bytes passed in must be valid UTF-8.
+    /// ___
+    pub const unsafe fn to_str_unchecked(&self)->&str{
+        unsafe{core::str::from_utf8_unchecked(self.base_alphabet)}
+    }
+
+    /// Base to `&str` conversion.
+    /// 
+    /// Returns `&str`.
+    pub const fn as_str(&self)->&str{
+        match core::str::from_utf8(self.base_alphabet){
+            Ok(str_base)=>str_base,
+            Err(_)=>""
+        }
+    }
+
+    /// Base to printable ASCII (`&str`) conversion.
+    /// 
+    /// Returns a `&str` slice containing printable ASCII characters up to the first non-printable character.
+    pub const fn as_printable_ascii(&self)->&str{
+        let mut counter:usize=0;
+        
+        while counter<self.base_alphabet.len(){
+            let b:u8=self.base_alphabet[counter];
+            if b<' ' as u8||b>'~' as u8{
+                let valid_prefix:&[u8]=self.base_alphabet.split_at(counter).0;
+                return unsafe{core::str::from_utf8_unchecked(valid_prefix)}
             }
-            ix+=1
+            counter+=1
         }
 
-        start=new_start;
-
-        if target_count>=out_buf.len()||target_count>=MAX_LEN{panic!("Output buffer overflow")}
-        target_indices[target_count]=current_carry;
-        target_count+=1;
+        unsafe{core::str::from_utf8_unchecked(self.base_alphabet)}
     }
 
-    let mut write_idx:usize=0;
-
-    while write_idx<target_count{
-        let digit_idx:usize=target_indices[target_count-1-write_idx];
-        out_buf[write_idx]=target_base[digit_idx];
-        write_idx+=1;
+    /// New base from base string slice (`&str`).
+    /// 
+    /// Creates a new base from the given slice of text (`&str`).
+    pub const fn from_str(base_alphabet_str:&'a str)->Self{
+        Self{base_alphabet:base_alphabet_str.as_bytes()}
     }
+}
 
-    target_count
+impl<'a>Numeral<'a>{
+    
 }
