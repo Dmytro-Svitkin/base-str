@@ -28,7 +28,7 @@ pub const fn new_base(old_base:&[u8],digits:u8)->&[u8]{
     
 }
 
-const fn resolve_invalid_digit(base:&[u8],digit:u8)->usize{
+const fn find_digit(base:&[u8],digit:u8)->usize{
     let mut counter:usize=0;
     
     while counter<base.len(){
@@ -51,4 +51,62 @@ pub const fn trim_zeros<'a>(value:&'a[u8],base:&[u8])->&'a[u8]{
     value.split_at(1).0// Returns a slice containing a single zero, if the collection contained zeros only.
 }
 
-pub const fn convert(value:&[u8],source_base:&[u8],target_base:&[u8],out_buf:&mut[u8])->usize{0}
+pub const fn const_convert(value:&[u8],source_base:&[u8],target_base:&[u8],out_buf:&mut[u8])->usize{
+    let source_base_len:usize=source_base.len();
+    let target_base_len:usize=target_base.len();
+
+    if value.is_empty()||source_base_len==0||target_base_len==0{return 0};
+
+    let value:&[u8]=trim_zeros(value, source_base);
+    if value.is_empty(){return 0}
+
+    const MAX_LEN:usize=512;
+    if value.len()>MAX_LEN{panic!("[!] INPUT VALUE IS TOO LARGE")}
+
+    let mut source_digits:[usize;512]=[0usize;MAX_LEN];
+    let mut counter:usize=0;
+    while counter<value.len(){
+        source_digits[counter]=find_digit(source_base,value[counter]);
+        counter+=1
+    }
+
+    let mut target_indices:[usize;512]=[0usize;MAX_LEN];
+    let mut target_count:usize=0;
+    let mut start:usize=0;
+
+    while start<value.len(){
+        let mut current_carry:usize=0;
+        let mut new_start:usize=start;
+        let mut leading_zero:bool=true;
+
+        let mut ix:usize=start;
+        while ix<value.len(){
+            let working_value:usize=current_carry*source_base_len+source_digits[ix];
+            let quotient_digit:usize=working_value/target_base_len;
+            current_carry=working_value%target_base_len;
+            source_digits[ix]=quotient_digit;
+
+            if leading_zero{
+                if quotient_digit==0{new_start+=1}
+                else{leading_zero=false}
+            }
+            ix+=1
+        }
+
+        start=new_start;
+
+        if target_count>=out_buf.len()||target_count>=MAX_LEN{panic!("Output buffer overflow")}
+        target_indices[target_count]=current_carry;
+        target_count+=1;
+    }
+
+    let mut write_idx:usize=0;
+
+    while write_idx<target_count{
+        let digit_idx:usize=target_indices[target_count-1-write_idx];
+        out_buf[write_idx]=target_base[digit_idx];
+        write_idx+=1;
+    }
+
+    target_count
+}
