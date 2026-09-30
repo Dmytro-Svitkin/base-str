@@ -9,9 +9,9 @@ pub const fn unsafe_base_to_str(base:&[u8])->&str{
     unsafe{core::str::from_utf8_unchecked(base)}
 }
 
-pub const fn base_to_str(base:&[u8])->&str{
+/*pub const fn base_to_str(base:&[u8])->&str{
     unsafe{core::str::from_utf8_unchecked(base)}
-}
+}*/
 
 pub const fn base<'a>(x:u8)->&'a[u8]{// Limited to u8 and redeclared to usize, because I want to make bases over 255 impossible. Note that base(256) is not possible (but possible via constant BASE256).
     let x:usize=x as usize;
@@ -28,46 +28,14 @@ pub const fn new_base(old_base:&[u8],digits:u8)->&[u8]{
     
 }
 
-pub fn convert<'a>(value:&[u8],source_base:&[u8],target_base:&[u8])->Vec<u8>{// Might replace Vec by a no_std alloc::vec::Vec or by another solution.
-    let source_base_len:usize=source_base.len();
-    let target_base_len:usize=target_base.len();
-
-    if value.is_empty()||source_base_len==0||target_base_len==0{return Vec::new()}
+const fn resolve_invalid_digit(base:&[u8],digit:u8)->usize{
+    let mut counter:usize=0;
     
-    let value:&[u8]=trim_zeros(value,source_base);
-    
-    let mut source_digits:Vec<usize>=value
-        .iter().map(|&b|{
-            source_base.iter().position(|&sb|sb==b).expect("[!] INVALID DIGIT")
-        })
-        .collect();
-
-    let mut target_indices:Vec<usize>=Vec::new();
-    let mut start:usize=0;
-
-    while start<source_digits.len(){
-        let mut current_carry:usize=0;
-        let mut new_start:usize=start;
-        let mut leading_zero:bool=true;
-
-        for ix in start..source_digits.len(){
-            let working_value:usize=current_carry*source_base_len+source_digits[ix];
-            let quotient_digit:usize=working_value/target_base_len;
-            current_carry=working_value%target_base_len;
-
-            source_digits[ix]=quotient_digit;
-
-            if leading_zero{
-                if quotient_digit==0{new_start+=1}
-                else{leading_zero=false}
-            }
-        }
-
-        start=new_start;
-        target_indices.push(current_carry);
+    while counter<base.len(){
+        if base[counter]==digit{return counter}
+        counter+=1
     }
-
-    target_indices.into_iter().rev().map(|ix:usize|target_base[ix]).collect()
+    panic!("[!] INVALID DIGIT")
 }
 
 pub const fn trim_zeros<'a>(value:&'a[u8],base:&[u8])->&'a[u8]{
@@ -82,3 +50,5 @@ pub const fn trim_zeros<'a>(value:&'a[u8],base:&[u8])->&'a[u8]{
     }
     value.split_at(1).0// Returns a slice containing a single zero, if the collection contained zeros only.
 }
+
+pub const fn convert(value:&[u8],source_base:&[u8],target_base:&[u8],out_buf:&mut[u8])->usize{0}
