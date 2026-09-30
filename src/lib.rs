@@ -4,8 +4,9 @@ mod base;
 pub use crate::base::*;
 
 pub struct Numeral<'a>{
-    value:&'a[u8],
-    base:Base<'a>
+    value:[u8;1024],
+    base:Base<'a>,
+    start:usize
 }
 
 /// Numeral base.
@@ -121,5 +122,25 @@ impl<'a>Base<'a>{
 }
 
 impl<'a>Numeral<'a>{
-    
+    pub const fn new(value:&[u8],base:Base<'a>)->Self{
+        let mut new_value:[u8;1024]=[0;1024];
+        let value_len:usize=value.len();
+
+        let(start,offset)=if value_len>=1024{(0,value_len-1024)}
+        else{(1024-value_len,0)};
+
+        let mut counter:usize=0;
+
+        while(start+counter)<1024{
+            new_value[start+counter]=value[offset+counter];
+            counter+=1;
+        }
+
+        Self{value:new_value,base,start}
+    }
+
+    pub const fn from_raw(value:[u8;1024],base:Base<'a>,start:usize)->Self{
+        let start:usize=if start>1024{1024}else{start};
+        Self{value,base,start}
+    }
 }
