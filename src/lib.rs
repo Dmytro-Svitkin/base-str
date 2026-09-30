@@ -1,6 +1,13 @@
 mod base;
 pub use crate::base::*;
 
+struct Numeral<'a>{
+    value:&'a[u8],
+    base:Base<'a>
+}
+
+struct Base<'a>{alphabet:&'a[u8]}
+
 pub const fn str_to_base(str_alphabet:&str)->&[u8]{
     str_alphabet.as_bytes()
 }
