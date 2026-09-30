@@ -3,14 +3,14 @@
 mod base;
 pub use crate::base::*;
 
-struct Numeral<'a>{
+pub struct Numeral<'a>{
     value:&'a[u8],
     base:Base<'a>
 }
 
 /// Numeral base.
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
-struct Base<'a>{base_alphabet:&'a[u8]}
+pub struct Base<'a>{pub(crate)base_alphabet:&'a[u8]}
 
 impl<'a>Base<'a>{
     /// New base.
@@ -87,6 +87,36 @@ impl<'a>Base<'a>{
     /// Creates a new base from the given slice of text (`&str`).
     pub const fn from_str(base_alphabet_str:&'a str)->Self{
         Self{base_alphabet:base_alphabet_str.as_bytes()}
+    }
+
+    /// New base from a slice of another base.
+    /// 
+    /// Creates a new base from the given base, its start and end.
+    /// ___
+    /// Neither `start` or `end` can exceed the length of the given base, 
+    /// otherwise they will be clamped to the lenght of the given base.
+    /// 
+    /// `start` cannot be greater than `end`, otherwise they will be swapped.
+    pub const fn from_base(base:Base<'a>,start:usize,end:usize)->Self{
+        let base_len:usize=base.len();
+        let mut start:usize=start;
+        let mut end:usize=end;
+
+        if start>base_len{start=base_len}
+        if end>base_len{end=base_len}
+        if start>end{(start,end)=(end,start);};
+
+        Self{base_alphabet:base.base_alphabet.split_at(end).0.split_at(start).1}
+    }
+
+    /// New base from a slice of another base using radix.
+    /// 
+    /// Creates a new base from corresponding to radix base.
+    pub const fn from_radix(radix:u8)->Self{
+        let radix:usize=radix as usize;
+        if radix<65{return Base::from_base(BASE64,0,radix)}
+        else if radix<96{return Base::from_base(PRINTABLE_ASCII,0,radix)}
+        Base::from_base(BASE256,0,radix)
     }
 }
 
