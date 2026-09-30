@@ -1,9 +1,9 @@
 [package]
 name = "u8-base-converter"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
-license-file = "LICENSE"
-repository = "https://github.com/Dmytro-Svitkin/base-str"
-description = "Arbitrary-length base conversion for u8 bases."
+license = "BSD-3-Clause"
+repository = "https://github.com/Dmytro-Svitkin/u8-base-converter"
+description = "Arbitrary-length base converter for u8 bases."
 
 [dependencies]

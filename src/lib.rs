@@ -1,5 +1,5 @@
-mod alphabet;
-pub use crate::alphabet::*;
+mod base;
+pub use crate::base::*;
 
 pub const fn str_to_base(str_alphabet:&str)->&[u8]{
     str_alphabet.as_bytes()
