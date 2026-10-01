@@ -126,6 +126,18 @@ impl<'a>Base<'a>{
 }
 
 impl<'a>Numeral<'a>{
+    pub const fn len(&self)->usize{
+        1024-self.start
+    }
+
+    pub const fn radix(&self)->usize{
+        self.base.radix()
+    }
+
+    pub const fn get_base(&self)->Base{
+        Base{base_alphabet:self.base.base_alphabet}
+    }
+
     pub const fn new(value:&[u8],base:Base<'a>)->Self{
         if value.is_empty()||base.len()<2{return Self{value:[0;1024],base,start:1024}}
 
@@ -136,7 +148,7 @@ impl<'a>Numeral<'a>{
             let byte:u8=value[counter];
             let mut found:bool=false;
             let mut digit_counter:usize=0;
-            while digit_counter<base.base_alphabet.len() {
+            while digit_counter<base.base_alphabet.len(){
                 if base.base_alphabet[digit_counter]==byte{
                     found=true;
                     break;
