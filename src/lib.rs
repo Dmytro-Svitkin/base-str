@@ -134,7 +134,7 @@ impl<'a>Numeral<'a>{
         self.base.radix()
     }
 
-    pub const fn get_base(&self)->Base{
+    pub const fn get_base(&self)->Base<'a>{
         Base{base_alphabet:self.base.base_alphabet}
     }
 
