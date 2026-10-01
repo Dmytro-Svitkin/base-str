@@ -60,7 +60,7 @@ impl<'a>Base<'a>{
     /// Returns `&str`.
     pub const fn as_str(&self)->&str{
         match core::str::from_utf8(self.base_alphabet){
-            Ok(str_base)=>str_base,
+            Ok(base_str)=>base_str,
             Err(_)=>""
         }
     }
@@ -139,8 +139,63 @@ impl<'a>Numeral<'a>{
         Self{value:new_value,base,start}
     }
 
+    pub const fn new_bin(value:&[u8])->Self{
+        Numeral::new(value,BINARY)
+    }
+
+    pub const fn new_oct(value:&[u8])->Self{
+        Numeral::new(value,OCTAL)
+    }
+
+    pub const fn new_dec(value:&[u8])->Self{
+        Numeral::new(value,DECIMAL)
+    }
+
+    pub const fn new_hex(value:&[u8])->Self{
+        Numeral::new(value,HEXADECIMAL)
+    }
+
     pub const fn from_raw(value:[u8;1024],base:Base<'a>,start:usize)->Self{
         let start:usize=if start>1024{1024}else{start};
         Self{value,base,start}
+    }
+
+    pub const fn from_str(value_str:&str,base_str:&'a str)->Self{
+        Numeral::new(value_str.as_bytes(),Base{base_alphabet:base_str.as_bytes()})
+    }
+
+    pub const unsafe fn value_as_str_unchecked(&self)->&str{
+        unsafe{core::str::from_utf8_unchecked(&self.value)}
+    }
+
+    pub const unsafe fn value_as_str(&self)->&str{
+        match core::str::from_utf8(&self.value){
+            Ok(value_str)=>value_str,
+            Err(_)=>""
+        }
+    }
+
+    pub const fn value_as_printable_ascii(&self)->&str{
+        let mut counter:usize=0;
+        
+        while counter<self.value.len(){
+            let b:u8=self.value[counter];
+            if b<' ' as u8||b>'~' as u8{
+                let valid_prefix:&[u8]=self.value.split_at(counter).0;
+                return unsafe{core::str::from_utf8_unchecked(valid_prefix)}
+            }
+            counter+=1
+        }
+
+        unsafe{core::str::from_utf8_unchecked(&self.value)}
+    }
+
+    pub const fn convert(&self,target_base:Base)->Self{
+        let source_base:Base=self.base;
+        let source_radix:usize=source_base.radix();
+        let target_radix:usize=target_base.radix();
+
+        let value:&[u8]=&self.value;
+        let mut result_value:[u8;1024]=[target_base.zero();1024];
     }
 }

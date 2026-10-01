@@ -8,3 +8,4 @@ fn test_base(){
     assert_eq!(DECIMAL,Base::from_radix(10));
     assert_eq!(HEXADECIMAL.len(),16)
 }
+
