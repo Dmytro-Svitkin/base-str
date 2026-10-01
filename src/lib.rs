@@ -1,8 +1,12 @@
 #![no_std]
 
 mod base;
+use core::num;
+
 pub use crate::base::*;
 
+/// Numeral.
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub struct Numeral<'a>{
     value:[u8;1024],
     base:Base<'a>,
@@ -123,15 +127,35 @@ impl<'a>Base<'a>{
 
 impl<'a>Numeral<'a>{
     pub const fn new(value:&[u8],base:Base<'a>)->Self{
-        let mut new_value:[u8;1024]=[0;1024];
+        if value.is_empty()||base.len()<2{return Self{value:[0;1024],base,start:1024}}
+
+        let value:&[u8]=trim_zeros(value,base);
+
+        let mut counter:usize=0;
+        while counter<value.len(){
+            let byte:u8=value[counter];
+            let mut found:bool=false;
+            let mut digit_counter:usize=0;
+            while digit_counter<base.base_alphabet.len() {
+                if base.base_alphabet[digit_counter]==byte{
+                    found=true;
+                    break;
+                }
+                digit_counter+=1;
+            }
+
+            if!found{return Self{value:[0;1024],base,start:1024}}
+            counter+=1
+        }
+
+        let mut new_value:[u8;1024]=[0u8;1024];
         let value_len:usize=value.len();
 
         let(start,offset)=if value_len>=1024{(0,value_len-1024)}
         else{(1024-value_len,0)};
 
         let mut counter:usize=0;
-
-        while(start+counter)<1024{
+        while start+counter<1024{
             new_value[start+counter]=value[offset+counter];
             counter+=1;
         }
@@ -155,6 +179,23 @@ impl<'a>Numeral<'a>{
         Numeral::new(value,HEXADECIMAL)
     }
 
+    pub const fn new_dec_from_u128(value:u128)->Self{
+        let mut value:u128=value;
+        const MAX_U128_LEN:usize=39;
+        let mut result:[u8;MAX_U128_LEN]=[0;MAX_U128_LEN];
+        let mut counter:usize=1;
+        
+        while value>0{
+            result[MAX_U128_LEN-counter]=b'0'+(value%10)as u8;
+            value/=10;
+            counter+=1
+        }
+        
+        let mut numeral:Numeral=Numeral::new(&result,DECIMAL);
+        numeral.start=1025-counter;
+        numeral
+    }
+
     pub const fn from_raw(value:[u8;1024],base:Base<'a>,start:usize)->Self{
         let start:usize=if start>1024{1024}else{start};
         Self{value,base,start}
@@ -168,8 +209,8 @@ impl<'a>Numeral<'a>{
         unsafe{core::str::from_utf8_unchecked(&self.value)}
     }
 
-    pub const unsafe fn value_as_str(&self)->&str{
-        match core::str::from_utf8(&self.value){
+    pub const fn value_as_str(&self)->&str{
+        match core::str::from_utf8(self.trimmed_value()){
             Ok(value_str)=>value_str,
             Err(_)=>""
         }
@@ -177,25 +218,41 @@ impl<'a>Numeral<'a>{
 
     pub const fn value_as_printable_ascii(&self)->&str{
         let mut counter:usize=0;
-        
-        while counter<self.value.len(){
-            let b:u8=self.value[counter];
+        let value:&[u8]=self.trimmed_value();
+        while counter<value.len(){
+            let b:u8=value[counter];
             if b<' ' as u8||b>'~' as u8{
-                let valid_prefix:&[u8]=self.value.split_at(counter).0;
-                return unsafe{core::str::from_utf8_unchecked(valid_prefix)}
+                return unsafe{core::str::from_utf8_unchecked(value.split_at(counter).0)}
             }
             counter+=1
         }
 
-        unsafe{core::str::from_utf8_unchecked(&self.value)}
+        unsafe{core::str::from_utf8_unchecked(value)}
     }
 
-    pub const fn convert(&self,target_base:Base)->Self{
+    const fn trimmed_value(&self)->&[u8]{
+        (self.value).split_at(self.start).1
+    }
+
+    /*pub const fn convert(&self,target_base:Base)->Self{
         let source_base:Base=self.base;
         let source_radix:usize=source_base.radix();
         let target_radix:usize=target_base.radix();
 
         let value:&[u8]=&self.value;
         let mut result_value:[u8;1024]=[target_base.zero();1024];
+    }*/
+}
+
+pub const fn trim_zeros<'a>(value:&'a[u8],base:Base)->&'a[u8]{
+    if value.is_empty()||base.len()<2{return value}
+
+    let zero:u8=base.zero();
+    let mut index_counter:usize=0;
+
+    while index_counter<value.len(){
+        if value[index_counter]!=zero{return value.split_at(index_counter).1}
+        index_counter+=1
     }
+    value.split_at(1).0// Returns a slice containing a single zero, if the collection contained zeros only.
 }
