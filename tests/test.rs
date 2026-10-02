@@ -12,7 +12,7 @@ fn test_base(){
 
 #[test]
 fn test_numeral(){
-    println!("[#] {:?}",Numeral::new(b"52k8",DECIMAL).value_as_printable_ascii());
-    //assert_eq!("7123",Numeral::new_dec_from_u128(7123).value_as_printable_ascii())
+    println!("[#] {:?}",Numeral::new_dec_from_u128(333).value_as_printable_ascii());
+    assert_eq!("7123",Numeral::new_dec_from_u128(7123).value_as_printable_ascii());
+    println!("[#] {:?}",Numeral::new_dec_from_u128(u8::MAX as u128).len())
 }
-
