@@ -14,6 +14,6 @@ fn test_base(){
 fn test_numeral(){
     //println!("[#] {:?}",Numeral::new_dec_from_u128(333).value_as_printable_ascii());
     //assert_eq!("7123",Numeral::new_dec_from_u128(7123).value_as_printable_ascii());
-    println!("[#] {}",Numeral::new_dec_from_u128(63).converted_to(UNARY).len());
-    println!("[#] {}",Numeral::new(b"|||||",UNARY).converted_to(UNARY).len())
+    //println!("[#] {}",Numeral::new_dec_from_u128(63).converted_to(UNARY).len());
+    println!("[#] {:?}",Numeral::new(&[b"z"[0];1024],ALPHANUMERIC).converted_to(BINARY).value_as_str())
 }

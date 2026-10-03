@@ -238,12 +238,35 @@ impl<'a>Numeral<'a>{
         Numeral::new(trim_zeros(&result,DECIMAL),DECIMAL)
     }
 
-    /*
-    pub const fn from_raw(value:[u8;1024],base:Base<'a>,start:usize)->Self{
-        let start:usize=if start>1024{1024}else{start};
-        Self{value,base,start}
+    pub const fn as_u128(&self)->Option<u128>{
+        if self.is_empty(){return None}
+        let decimal_numeral:Numeral=self.converted_to(DECIMAL);
+        if decimal_numeral.len()>39{return None}
+        let max_u128:Numeral=Numeral::new_dec_from_u128(u128::MAX);
+        let decimal_numeral_value:&[u8]=decimal_numeral.value.split_at(1024-39).1;
+        let max_u128_value:&[u8]=max_u128.trimmed_value();
+        let mut digit_counter:usize=0;
+
+        while digit_counter<39{
+            let decimal_numeral_value_digit:u8=decimal_numeral_value[digit_counter];
+            let max_u128_value_digit:u8=max_u128_value[digit_counter];
+            if decimal_numeral_value_digit>max_u128_value_digit{return None}
+            else if decimal_numeral_value_digit<max_u128_value_digit{break}
+            digit_counter+=1;
+        }
+
+        let mut result:u128=0;
+        let mut digit_counter:usize=0;
+        let zero:u8=DECIMAL.zero();
+
+        while digit_counter<39{
+            result*=10;
+            result+=(decimal_numeral_value[digit_counter]-zero)as u128;
+            digit_counter+=1;
+        }
+
+        Some(result)
     }
-    */
 
     /// New numeral.
     /// 
@@ -306,10 +329,13 @@ impl<'a>Numeral<'a>{
         self.start>1023
     }
 
-
+    /// Numeral base converter.
+    /// 
+    /// Converts the numeral to the given target base.
+    /// 
+    /// Returns an empty value byte slice (`&[u8]`) in case of owerflow.
     pub const fn converted_to(&self,target_base:Base<'a>)->Self{
         let mut source_value:[u8;1024]=self.value;
-        //let source_value:&mut[u8]=source_value.split_at_mut(self.start).1;
 
         let mut target_value:[u8;1024]=[target_base.zero();1024];
         let mut target_start:usize=1024;
@@ -318,34 +344,42 @@ impl<'a>Numeral<'a>{
         let source_base_radix:usize=source_base.radix();
         let target_base_radix:usize=target_base.radix();
 
-        if source_value.is_empty()||source_base_radix==0||target_base_radix==0{
-            return Self{value:target_value,base:target_base,start:1024}
+        if source_value.is_empty()||source_base_radix==0||target_base_radix==0{}
+        else if source_base_radix==target_base_radix{return Self{value:self.value,base:self.base,start:self.start}}
+        else if target_base_radix==1{
+            let Some(target_len)=self.as_u128()else{return Self{value:target_value,base:target_base,start:target_start}};
+            let target_len:usize=target_len as usize;
+            if target_len<1025{target_start=1024-target_len;target_value=[target_base.zero();1024]}
         }
+        else if source_base_radix==1{
+            return Numeral::new_dec_from_u128(self.len()as u128).converted_to(target_base)
+        }
+        else{
+            loop{
+                let mut carry:usize=0;
+                let mut all_zero:bool=true;
+                let mut value_counter:usize=self.start;
 
-        loop{
-            let mut carry:usize=0;
-            let mut all_zero:bool=true;
-            let mut value_counter:usize=self.start;
+                while value_counter<1024{
+                    let digit_val:usize=digit_ix(source_value[value_counter],source_base);
+                    let rcl:usize=carry*source_base_radix+digit_val;
 
-            while value_counter<1024{
-                let digit_val:usize=digit_ix(source_value[value_counter],source_base);
-                let rcl:usize=carry*source_base_radix+digit_val;
+                    let quotient:usize=rcl/target_base_radix;
+                    carry=rcl%target_base_radix;
 
-                let quotient:usize=rcl/target_base_radix;
-                carry=rcl%target_base_radix;
+                    source_value[value_counter]=source_base.base_alphabet[quotient];
 
-                source_value[value_counter]=source_base.base_alphabet[quotient];
+                    if quotient>0{all_zero=false}
+                    value_counter+=1
+                }
 
-                if quotient>0{all_zero=false}
-                value_counter+=1
+                if target_start==0{break}
+
+                target_start-=1;
+                target_value[target_start]=target_base.base_alphabet[carry];
+
+                if all_zero{break}
             }
-
-            if target_start==0{break}
-
-            target_start-=1;
-            target_value[target_start]=target_base.base_alphabet[carry];
-
-            if all_zero{break}
         }
 
         Self{value:target_value,base:target_base,start:target_start}
