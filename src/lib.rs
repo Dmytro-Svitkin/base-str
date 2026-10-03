@@ -373,7 +373,7 @@ impl<'a>Numeral<'a>{
                     value_counter+=1
                 }
 
-                if target_start==0{break}
+                if target_start==0{return Self{value:[target_base.zero();1024],base:target_base,start:1024}}
 
                 target_start-=1;
                 target_value[target_start]=target_base.base_alphabet[carry];
