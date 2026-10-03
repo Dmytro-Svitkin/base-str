@@ -3,7 +3,7 @@
 mod base;
 pub use crate::base::*;
 
-/// Numeral.
+/// A numeral.
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub struct Numeral<'a>{
     value:[u8;1024],
@@ -11,7 +11,7 @@ pub struct Numeral<'a>{
     start:usize
 }
 
-/// Numeral base.
+/// A numeral base.
 #[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub struct Base<'a>{pub(crate)base_alphabet:&'a[u8]}
 
@@ -283,7 +283,7 @@ impl<'a>Numeral<'a>{
     pub const fn value_as_printable_ascii(&self)->&str{
         let mut counter:usize=0;
         let value:&[u8]=self.trimmed_value();
-        let (printable_ascii_zero,printable_ascii_max)=(PRINTABLE_ASCII.zero(),PRINTABLE_ASCII.base_alphabet[PRINTABLE_ASCII.len()]);
+        let (printable_ascii_zero,printable_ascii_max)=(PRINTABLE_ASCII.zero(),PRINTABLE_ASCII.base_alphabet[PRINTABLE_ASCII.len()-1]);
         while counter<value.len(){
             let b:u8=value[counter];
             if b<printable_ascii_zero||b>printable_ascii_max{
@@ -305,6 +305,51 @@ impl<'a>Numeral<'a>{
     pub const fn is_empty(&self)->bool{
         self.start>1023
     }
+
+
+    pub const fn converted_to(&self,target_base:Base<'a>)->Self{
+        let mut source_value:[u8;1024]=self.value;
+        //let source_value:&mut[u8]=source_value.split_at_mut(self.start).1;
+
+        let mut target_value:[u8;1024]=[target_base.zero();1024];
+        let mut target_start:usize=1024;
+
+        let source_base:Base=self.base;
+        let source_base_radix:usize=source_base.radix();
+        let target_base_radix:usize=target_base.radix();
+
+        if source_value.is_empty()||source_base_radix==0||target_base_radix==0{
+            return Self{value:target_value,base:target_base,start:1024}
+        }
+
+        loop{
+            let mut carry:usize=0;
+            let mut all_zero:bool=true;
+            let mut value_counter:usize=self.start;
+
+            while value_counter<1024{
+                let digit_val:usize=digit_ix(source_value[value_counter],source_base);
+                let rcl:usize=carry*source_base_radix+digit_val;
+
+                let quotient:usize=rcl/target_base_radix;
+                carry=rcl%target_base_radix;
+
+                source_value[value_counter]=source_base.base_alphabet[quotient];
+
+                if quotient>0{all_zero=false}
+                value_counter+=1
+            }
+
+            if target_start==0{break}
+
+            target_start-=1;
+            target_value[target_start]=target_base.base_alphabet[carry];
+
+            if all_zero{break}
+        }
+
+        Self{value:target_value,base:target_base,start:target_start}
+    }
 }
 
 const fn trim_zeros<'a>(value:&'a[u8],base:Base)->&'a[u8]{
@@ -321,4 +366,15 @@ const fn trim_zeros<'a>(value:&'a[u8],base:Base)->&'a[u8]{
         value_counter+=1
     }
     value.split_at(1).0// Returns a slice containing a single zero, if the collection contained zeros only.
+}
+
+const fn digit_ix(digit:u8,base:Base)->usize{
+    let base_len:usize=base.len();
+    let mut index_counter:usize=0;
+
+    while index_counter<base_len{
+        if digit==base.base_alphabet[index_counter]{return index_counter}
+        index_counter+=1
+    }
+    0
 }
